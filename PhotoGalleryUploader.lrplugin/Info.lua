@@ -1,7 +1,8 @@
 return {
   appVersion = "12.0",
-  LrSdkVersion = "12.0",
-  LrSdkMinimumVersion = "10.0",
+  LrSdkVersion = 12.0,
+  LrSdkMinimumVersion = 10.0,
+  LrToolkitIdentifier = "com.photogalleryuploader.lightroom",
   LrPluginName = "Photo Gallery Uploader",
   LrPluginInfoUrl = "https://example.com",
   LrPluginInfoProvider = "PhotoGalleryUploaderInfo.lua",
