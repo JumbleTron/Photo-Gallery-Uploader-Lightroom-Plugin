@@ -8,7 +8,7 @@ return {
 
   LrExportServiceProvider = {
     title = LOC "$$$/PhotoGalleryUploader/ExportProvider/Title=Photo Gallery Uploader",
-    file = "PublishServiceProvider.lua",
+    file = "lua/export/PublishServiceProvider.lua",
     exportDialogTooltip = "Upload photos to Photo Gallery system",
     showLeadingIndicators = false,
     showLeadingLabels = false,
@@ -16,7 +16,7 @@ return {
 
   LrExportFilterProvider = {
     title = LOC "$$$/PhotoGalleryUploader/ExportProvider/Title=Photo Gallery Uploader",
-    file = "PublishServiceExportDialog.lua",
+    file = "lua/ui/PublishServiceExportDialog.lua",
   },
 
   LrMetadataProvider = "Metadata.lua",
@@ -24,7 +24,7 @@ return {
   LrPublishedCollectionMenuItems = {
     {
       title = "Sync feedback from client",
-      file = "PublishServiceProvider.lua",
+      file = "lua/export/PublishServiceProvider.lua",
       handler = "publishServiceProvider.syncFeedbackForCollection",
     },
   },
@@ -32,7 +32,7 @@ return {
   LrLibraryMenuItems = {
     {
       title = LOC "$$$/PhotoGalleryUploader/Menu/SyncAllFeedback=Photo Gallery Uploader: Sync feedback (all galleries)",
-      file = "PublishServiceProvider.lua",
+      file = "lua/export/PublishServiceProvider.lua",
       handler = "publishServiceProvider.syncAllFeedback",
     },
   },
@@ -40,7 +40,7 @@ return {
   LrExportMenuItems = {
     {
       title = LOC "$$$/PhotoGalleryUploader/Menu/UploadPhoto=Upload photo to gallery",
-      file = "SinglePhotoExport.lua",
+      file = "lua/export/SinglePhotoExport.lua",
       handler = "singlePhotoExport.exportMenuItemHandler",
     },
   },

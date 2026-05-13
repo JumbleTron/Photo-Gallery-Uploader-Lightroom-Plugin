@@ -2,23 +2,33 @@ local LrBinding = import "LrBinding"
 local LrDialogs = import "LrDialogs"
 local LrFunctionContext = import "LrFunctionContext"
 local LrPrefs = import "LrPrefs"
-local ApiClient = require "ApiClient"
+local Config = require "lua/core/Config"
 
 local exportDialogProvider = {}
 
-function exportDialogProvider.startDialog(propertyTable, f)
+local function initializePreferences(propertyTable)
+  local apiUrl, apiKey = Config.getCredentials()
   local prefs = LrPrefs.prefsForPlugin()
-  propertyTable.api_url = propertyTable.api_url or prefs.api_url or ""
-  propertyTable.api_key = propertyTable.api_key or prefs.api_key or ""
+
+  propertyTable.api_url = propertyTable.api_url or apiUrl
+  propertyTable.api_key = propertyTable.api_key or apiKey
   propertyTable.sync_keywords_only = propertyTable.sync_keywords_only or prefs.sync_keywords_only or false
+end
+
+local function savePreferences(propertyTable)
+  local prefs = LrPrefs.prefsForPlugin()
+  prefs.api_url = propertyTable.api_url
+  prefs.api_key = propertyTable.api_key
+  prefs.sync_keywords_only = propertyTable.sync_keywords_only
+end
+
+function exportDialogProvider.startDialog(propertyTable, f)
+  initializePreferences(propertyTable)
 end
 
 function exportDialogProvider.endDialog(propertyTable, why)
   if why == "ok" then
-    local prefs = LrPrefs.prefsForPlugin()
-    prefs.api_url = propertyTable.api_url
-    prefs.api_key = propertyTable.api_key
-    prefs.sync_keywords_only = propertyTable.sync_keywords_only
+    savePreferences(propertyTable)
   end
 end
 
@@ -58,15 +68,13 @@ function exportDialogProvider.sectionsForBottomOfDialog(propertyTable, f)
           title = LOC "$$$/PhotoGalleryUploader/AuthDialog/TestConnection=Test Połączenia",
           action = function()
             LrFunctionContext.callAsyncFunction(function(context)
-              local url = propertyTable.api_url
-              local key = propertyTable.api_key
-
-              if url == "" or key == "" then
-                LrDialogs.message(LOC "$$$/PhotoGalleryUploader/Error=Error", LOC "$$$/PhotoGalleryUploader/Error/ConfigureApiFirst=Proszę skonfiguruj API URL i Klucz", "warning")
+              if propertyTable.api_url == "" or propertyTable.api_key == "" then
+                Config.showMissingCredentialsError()
                 return
               end
 
-              local client = ApiClient.new(url, key)
+              local ApiClient = require "lua/core/ApiClient"
+              local client = ApiClient.new(propertyTable.api_url, propertyTable.api_key)
               local success, result = client:testConnection()
 
               if success then

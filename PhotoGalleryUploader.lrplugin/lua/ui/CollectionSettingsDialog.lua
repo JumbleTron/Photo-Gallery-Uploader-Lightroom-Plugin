@@ -1,7 +1,7 @@
 local LrBinding = import "LrBinding"
 local LrDialogs = import "LrDialogs"
 local LrFunctionContext = import "LrFunctionContext"
-local ApiClient = require "ApiClient"
+local Config = require "lua/core/Config"
 
 local dialog = {}
 
@@ -124,16 +124,9 @@ end
 
 function dialog.refreshGalleries(collectionSettings)
   LrFunctionContext.callAsyncFunction(function(context)
-    local prefs = import "LrPrefs".prefsForPlugin()
-    local apiUrl = prefs.api_url or ""
-    local apiKey = prefs.api_key or ""
+    local client = Config.createClient()
+    if not client then return end
 
-    if apiUrl == "" or apiKey == "" then
-      LrDialogs.message(LOC "$$$/PhotoGalleryUploader/Error=Error", LOC "$$$/PhotoGalleryUploader/Error/ConfigureApiFirst=Proszę skonfiguruj API URL i Klucz", "warning")
-      return
-    end
-
-    local client = ApiClient.new(apiUrl, apiKey)
     local success, galleries = client:getGalleries()
 
     if success then

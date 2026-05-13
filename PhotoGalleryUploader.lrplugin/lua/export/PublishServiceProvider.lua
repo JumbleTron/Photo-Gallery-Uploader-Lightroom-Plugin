@@ -4,10 +4,9 @@ local LrExportSession = import "LrExportSession"
 local LrApplication = import "LrApplication"
 local LrProgressScope = import "LrProgressScope"
 local LrFunctionContext = import "LrFunctionContext"
-local LrPrefs = import "LrPrefs"
-local ApiClient = require "ApiClient"
-local CollectionSettingsDialog = require "CollectionSettingsDialog"
-local SyncFeedback = require "SyncFeedback"
+local Config = require "lua/core/Config"
+local CollectionSettingsDialog = require "lua/ui/CollectionSettingsDialog"
+local SyncFeedback = require "lua/sync/SyncFeedback"
 
 local publishServiceProvider = {}
 
@@ -47,16 +46,9 @@ function publishServiceProvider.processRenderedPhotos(functionContext, exportCon
   local publishedCollection = exportContext.publishedCollection
   local collectionSettings = publishedCollection:getCollectionSettings()
 
-  local prefs = LrPrefs.prefsForPlugin()
-  local apiUrl = prefs.api_url or ""
-  local apiKey = prefs.api_key or ""
+  local client = Config.createClient()
+  if not client then return end
 
-  if apiUrl == "" or apiKey == "" then
-    LrDialogs.message("Error", "API credentials not configured", "warning")
-    return
-  end
-
-  local client = ApiClient.new(apiUrl, apiKey)
   local galleryId = collectionSettings.gallery_id
 
   if collectionSettings.mode == "new" and (not galleryId or galleryId == "") then
@@ -130,15 +122,8 @@ function publishServiceProvider.deletePhotosFromPublishedCollection(functionCont
     return
   end
 
-  local prefs = LrPrefs.prefsForPlugin()
-  local apiUrl = prefs.api_url or ""
-  local apiKey = prefs.api_key or ""
-
-  if apiUrl == "" or apiKey == "" then
-    return
-  end
-
-  local client = ApiClient.new(apiUrl, apiKey)
+  local client = Config.createClient()
+  if not client then return end
 
   for _, publishedPhoto in ipairs(publishedCollection:getPublishedPhotos()) do
     local remoteId = publishedPhoto:getRemoteId()
@@ -165,17 +150,9 @@ function publishServiceProvider.renamePublishedCollection(functionContext, publi
     return
   end
 
-  local prefs = LrPrefs.prefsForPlugin()
-  local apiUrl = prefs.api_url or ""
-  local apiKey = prefs.api_key or ""
-
-  if apiUrl == "" or apiKey == "" then
-    LrDialogs.message(LOC "$$$/PhotoGalleryUploader/Error=Error", LOC "$$$/PhotoGalleryUploader/Error/CredentialsNotConfigured=Dane do API nie są skonfigurowane", "warning")
-    return
-  end
-
   functionContext:callAsyncFunction(function(context)
-    local client = ApiClient.new(apiUrl, apiKey)
+    local client = Config.createClient()
+    if not client then return end
     local success, result = client:updateGallery(galleryId, newName)
 
     if success then

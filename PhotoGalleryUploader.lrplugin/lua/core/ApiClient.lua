@@ -4,15 +4,6 @@ local json = require "json"
 
 local ApiClient = {}
 
-function ApiClient.new(baseUrl, apiKey)
-  local client = {
-    baseUrl = baseUrl,
-    apiKey = apiKey,
-  }
-  setmetatable(client, { __index = ApiClient })
-  return client
-end
-
 local function buildHeaders(apiKey)
   return {
     ["X-API-Key"] = apiKey,
@@ -20,21 +11,7 @@ local function buildHeaders(apiKey)
   }
 end
 
-function ApiClient:request(method, endpoint, body, headers)
-  headers = headers or {}
-  headers["X-API-Key"] = self.apiKey
-  headers["Content-Type"] = "application/json"
-
-  local url = self.baseUrl .. endpoint
-  local bodyStr = body and json.encode(body) or nil
-
-  local success, response = LrHttp.request {
-    url = url,
-    method = method,
-    headers = headers,
-    body = bodyStr,
-  }
-
+local function handleResponse(success, response)
   if not success then
     return false, "HTTP request failed: " .. (response or "unknown error")
   end
@@ -46,6 +23,32 @@ function ApiClient:request(method, endpoint, body, headers)
 
   local decodedBody = response.body and response.body ~= "" and json.decode(response.body) or {}
   return true, decodedBody
+end
+
+function ApiClient.new(baseUrl, apiKey)
+  local client = {
+    baseUrl = baseUrl,
+    apiKey = apiKey,
+  }
+  setmetatable(client, { __index = ApiClient })
+  return client
+end
+
+function ApiClient:request(method, endpoint, body, headers)
+  headers = headers or buildHeaders(self.apiKey)
+  headers["X-API-Key"] = self.apiKey
+
+  local url = self.baseUrl .. endpoint
+  local bodyStr = body and json.encode(body) or nil
+
+  local success, response = LrHttp.request {
+    url = url,
+    method = method,
+    headers = headers,
+    body = bodyStr,
+  }
+
+  return handleResponse(success, response)
 end
 
 function ApiClient:testConnection()
@@ -71,10 +74,8 @@ function ApiClient:updateGallery(galleryId, name)
 end
 
 function ApiClient:uploadPhoto(galleryId, filePath, originalName, captureTime)
-  headers = {
-    ["X-API-Key"] = self.apiKey,
-  }
   local url = self.baseUrl .. "/api/galleries/" .. galleryId .. "/photos"
+  local headers = buildHeaders(self.apiKey)
 
   local success, response = LrHttp.post {
     url = url,
@@ -82,24 +83,12 @@ function ApiClient:uploadPhoto(galleryId, filePath, originalName, captureTime)
     filePath = filePath,
   }
 
-  if not success then
-    return false, "Upload failed: " .. (response or "unknown error")
-  end
-
-  local status = response.status or 0
-  if status < 200 or status >= 300 then
-    return false, "HTTP " .. status .. ": " .. (response.body or "no body")
-  end
-
-  local decodedBody = response.body and response.body ~= "" and json.decode(response.body) or {}
-  return true, decodedBody
+  return handleResponse(success, response)
 end
 
 function ApiClient:updatePhoto(galleryId, remoteId, filePath)
-  headers = {
-    ["X-API-Key"] = self.apiKey,
-  }
   local url = self.baseUrl .. "/api/galleries/" .. galleryId .. "/photos/" .. remoteId
+  local headers = buildHeaders(self.apiKey)
 
   local success, response = LrHttp.put {
     url = url,
@@ -107,17 +96,7 @@ function ApiClient:updatePhoto(galleryId, remoteId, filePath)
     filePath = filePath,
   }
 
-  if not success then
-    return false, "Update failed: " .. (response or "unknown error")
-  end
-
-  local status = response.status or 0
-  if status < 200 or status >= 300 then
-    return false, "HTTP " .. status .. ": " .. (response.body or "no body")
-  end
-
-  local decodedBody = response.body and response.body ~= "" and json.decode(response.body) or {}
-  return true, decodedBody
+  return handleResponse(success, response)
 end
 
 function ApiClient:deletePhoto(galleryId, remoteId)

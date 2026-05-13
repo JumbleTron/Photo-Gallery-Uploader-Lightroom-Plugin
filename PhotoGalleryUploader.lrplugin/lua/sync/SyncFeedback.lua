@@ -1,27 +1,38 @@
 local LrApplication = import "LrApplication"
 local LrDialogs = import "LrDialogs"
 local LrProgressScope = import "LrProgressScope"
-local LrPrefs = import "LrPrefs"
-local ApiClient = require "ApiClient"
+local Config = require "lua/core/Config"
 
 local SyncFeedback = {}
 
-local function applyFeedbackToPhoto(photo, status, comments, keywordsOnly)
+local function setPickStatus(photo, status, keywordsOnly)
+  if keywordsOnly then return end
+
   if status == "picked" then
-    if not keywordsOnly then
-      photo:setRawMetadata("pickStatus", 1)
-    end
+    photo:setRawMetadata("pickStatus", 1)
+  elseif status == "rejected" then
+    photo:setRawMetadata("pickStatus", -1)
+  end
+end
+
+local function addKeywordForStatus(photo, status)
+  if status == "picked" then
     photo:addKeyword("client-picked")
   elseif status == "rejected" then
-    if not keywordsOnly then
-      photo:setRawMetadata("pickStatus", -1)
-    end
     photo:addKeyword("client-rejected")
   end
+end
 
+local function addComments(photo, comments)
   if comments and comments ~= "" then
     photo:setRawMetadata("caption", comments)
   end
+end
+
+local function applyFeedbackToPhoto(photo, status, comments, keywordsOnly)
+  setPickStatus(photo, status, keywordsOnly)
+  addKeywordForStatus(photo, status)
+  addComments(photo, comments)
 end
 
 local function findPublishedPhotoByRemoteId(publishedCollection, remoteId)
@@ -34,15 +45,26 @@ local function findPublishedPhotoByRemoteId(publishedCollection, remoteId)
   return nil
 end
 
-function SyncFeedback.syncSingleGallery(publishedCollection)
-  local prefs = LrPrefs.prefsForPlugin()
-  local apiUrl = prefs.api_url or ""
-  local apiKey = prefs.api_key or ""
+local function processFeedbackItem(publishedCollection, feedback, keywordsOnly, stats)
+  local publishedPhoto = findPublishedPhotoByRemoteId(publishedCollection, feedback.remoteId)
 
-  if apiUrl == "" or apiKey == "" then
-    LrDialogs.message(LOC "$$$/PhotoGalleryUploader/Error=Error", LOC "$$$/PhotoGalleryUploader/Error/CredentialsNotConfigured=Dane do API nie są skonfigurowane", "warning")
-    return
+  if publishedPhoto then
+    local photo = publishedPhoto:getPhoto()
+    applyFeedbackToPhoto(photo, feedback.status, feedback.comments, keywordsOnly)
+
+    if feedback.status == "picked" then
+      stats.picked = stats.picked + 1
+    elseif feedback.status == "rejected" then
+      stats.rejected = stats.rejected + 1
+    else
+      stats.pending = stats.pending + 1
+    end
   end
+end
+
+function SyncFeedback.syncSingleGallery(publishedCollection)
+  local client = Config.createClient()
+  if not client then return end
 
   local collectionSettings = publishedCollection:getCollectionSettings()
   local galleryId = collectionSettings.gallery_id
@@ -52,41 +74,25 @@ function SyncFeedback.syncSingleGallery(publishedCollection)
     return
   end
 
-  local client = ApiClient.new(apiUrl, apiKey)
   local success, feedbackList = client:getFeedback(galleryId)
-
   if not success then
     LrDialogs.message(LOC "$$$/PhotoGalleryUploader/Error=Error", LOC("$$$/PhotoGalleryUploader/Error/FailedFetchFeedback=Nie udało się pobrać feedback: ^1", feedbackList), "warning")
     return
   end
 
   local catalog = LrApplication.activeCatalog()
+  local prefs = import "LrPrefs".prefsForPlugin()
+  local keywordsOnly = prefs.sync_keywords_only or false
+  local stats = { picked = 0, rejected = 0, pending = 0 }
+
   local progressScope = LrProgressScope {
     title = LOC "$$$/PhotoGalleryUploader/Progress/SyncingFeedback=Synchronizowanie feedback...",
   }
-
   progressScope:setPortionComplete(0, #feedbackList)
-
-  local stats = { picked = 0, rejected = 0, pending = 0 }
-  local keywordsOnly = prefs.sync_keywords_only or false
 
   catalog:withWriteAccessDo("Sync Gallery Feedback", function(context)
     for i, feedback in ipairs(feedbackList) do
-      local publishedPhoto = findPublishedPhotoByRemoteId(publishedCollection, feedback.remoteId)
-
-      if publishedPhoto then
-        local photo = publishedPhoto:getPhoto()
-        if feedback.status == "picked" then
-          applyFeedbackToPhoto(photo, "picked", feedback.comments, keywordsOnly)
-          stats.picked = stats.picked + 1
-        elseif feedback.status == "rejected" then
-          applyFeedbackToPhoto(photo, "rejected", feedback.comments, keywordsOnly)
-          stats.rejected = stats.rejected + 1
-        else
-          stats.pending = stats.pending + 1
-        end
-      end
-
+      processFeedbackItem(publishedCollection, feedback, keywordsOnly, stats)
       progressScope:setPortionComplete(i, #feedbackList)
     end
   end)
@@ -100,26 +106,18 @@ function SyncFeedback.syncSingleGallery(publishedCollection)
 end
 
 function SyncFeedback.syncAllGalleries()
-  local prefs = LrPrefs.prefsForPlugin()
-  local apiUrl = prefs.api_url or ""
-  local apiKey = prefs.api_key or ""
-
-  if apiUrl == "" or apiKey == "" then
-    LrDialogs.message(LOC "$$$/PhotoGalleryUploader/Error=Error", LOC "$$$/PhotoGalleryUploader/Error/CredentialsNotConfigured=Dane do API nie są skonfigurowane", "warning")
-    return
-  end
+  local client = Config.createClient()
+  if not client then return end
 
   local catalog = LrApplication.activeCatalog()
   local allPublishedCollections = catalog:getPublishedCollections()
-
+  local prefs = import "LrPrefs".prefsForPlugin()
   local stats = { picked = 0, rejected = 0, pending = 0, skipped = 0 }
-  local client = ApiClient.new(apiUrl, apiKey)
   local keywordsOnly = prefs.sync_keywords_only or false
 
   local progressScope = LrProgressScope {
     title = LOC "$$$/PhotoGalleryUploader/Progress/SyncingAllGalleries=Synchronizowanie feedback ze wszystkich galerii...",
   }
-
   progressScope:setPortionComplete(0, #allPublishedCollections)
 
   for collIdx, publishedCollection in ipairs(allPublishedCollections) do
@@ -128,35 +126,19 @@ function SyncFeedback.syncAllGalleries()
 
     if not galleryId or galleryId == "" then
       stats.skipped = stats.skipped + 1
-      progressScope:setPortionComplete(collIdx, #allPublishedCollections)
-      goto continue
-    end
+    else
+      local success, feedbackList = client:getFeedback(galleryId)
 
-    local success, feedbackList = client:getFeedback(galleryId)
-
-    if success and feedbackList then
-      catalog:withWriteAccessDo("Sync All Gallery Feedback", function(context)
-        for _, feedback in ipairs(feedbackList) do
-          local publishedPhoto = findPublishedPhotoByRemoteId(publishedCollection, feedback.remoteId)
-
-          if publishedPhoto then
-            local photo = publishedPhoto:getPhoto()
-            if feedback.status == "picked" then
-              applyFeedbackToPhoto(photo, "picked", feedback.comments, keywordsOnly)
-              stats.picked = stats.picked + 1
-            elseif feedback.status == "rejected" then
-              applyFeedbackToPhoto(photo, "rejected", feedback.comments, keywordsOnly)
-              stats.rejected = stats.rejected + 1
-            else
-              stats.pending = stats.pending + 1
-            end
+      if success and feedbackList then
+        catalog:withWriteAccessDo("Sync All Gallery Feedback", function(context)
+          for _, feedback in ipairs(feedbackList) do
+            processFeedbackItem(publishedCollection, feedback, keywordsOnly, stats)
           end
-        end
-      end)
+        end)
+      end
     end
 
     progressScope:setPortionComplete(collIdx, #allPublishedCollections)
-    ::continue::
   end
 
   local message = LOC("$$$/PhotoGalleryUploader/Success/SyncedAllGalleries=Łącznie zsynchronizowano: ^1 zaakceptowanych, ^2 odrzuconych, ^3 oczekujących (pominięto ^4)",

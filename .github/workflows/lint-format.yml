@@ -1,0 +1,217 @@
+name: Lint & Format Check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Luacheck Linter
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Lua tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.4 luarocks
+
+      - name: Install luacheck
+        run: |
+          luarocks install luacheck
+
+      - name: Run luacheck
+        run: |
+          luacheck PhotoGalleryUploader.lrplugin/lua/ --globals LOC import export --no-undefined-globals
+
+  format:
+    name: StyLua Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-action@v1
+
+      - name: Install stylua
+        run: cargo install stylua
+
+      - name: Check code formatting with StyLua
+        run: |
+          stylua --check PhotoGalleryUploader.lrplugin/lua/
+
+  syntax:
+    name: Lua Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Lua
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.4
+
+      - name: Check Lua syntax
+        run: |
+          for file in PhotoGalleryUploader.lrplugin/*.lua PhotoGalleryUploader.lrplugin/lua/**/*.lua; do
+            echo "Checking: $file"
+            luac -p "$file" || exit 1
+          done
+
+  version-check:
+    name: Version Consistency Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check version consistency
+        run: |
+          VERSION=$(grep 'major = \|minor = \|revision = ' PhotoGalleryUploader.lrplugin/Info.lua | grep -oE '[0-9]+' | head -3 | paste -sd '.' -)
+
+          if [ -z "$VERSION" ]; then
+            echo "❌ Could not extract version from Info.lua"
+            exit 1
+          fi
+
+          echo "✅ Version found: $VERSION"
+
+          # Check if version is semver format
+          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Version format is invalid: $VERSION (expected: X.Y.Z)"
+            exit 1
+          fi
+
+          echo "✅ Version format is valid"
+
+  file-size-check:
+    name: Plugin Size Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check plugin size
+        run: |
+          TOTAL_SIZE=$(du -sh PhotoGalleryUploader.lrplugin/ | cut -f1)
+          SIZE_BYTES=$(du -s PhotoGalleryUploader.lrplugin/ | cut -f1)
+          MAX_SIZE=10485760  # 10MB
+
+          echo "📦 Plugin Size: $TOTAL_SIZE"
+
+          if [ $SIZE_BYTES -gt $MAX_SIZE ]; then
+            echo "❌ Plugin size exceeds 10MB limit"
+            exit 1
+          else
+            echo "✅ Plugin size is within limits"
+          fi
+
+          # Count files
+          FILE_COUNT=$(find PhotoGalleryUploader.lrplugin/ -type f | wc -l)
+          echo "📄 File count: $FILE_COUNT"
+
+  complexity-check:
+    name: Code Complexity Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Lua tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.4 luarocks
+
+      - name: Install luacheck
+        run: |
+          luarocks install luacheck
+
+      - name: Analyze cyclomatic complexity
+        run: |
+          echo "=== Code Metrics ==="
+
+          # Count functions
+          FUNCTION_COUNT=$(grep -r "^function " PhotoGalleryUploader.lrplugin/lua/ --include="*.lua" | wc -l)
+          echo "📊 Total functions: $FUNCTION_COUNT"
+
+          # Count lines of code
+          LOC=$(find PhotoGalleryUploader.lrplugin/lua/ -name "*.lua" -exec wc -l {} + | tail -1 | awk '{print $1}')
+          echo "📝 Lines of code: $LOC"
+
+          # Average function size
+          if [ $FUNCTION_COUNT -gt 0 ]; then
+            AVG_SIZE=$((LOC / FUNCTION_COUNT))
+            echo "📏 Average function size: $AVG_SIZE lines"
+          fi
+
+          # Warn if any function is too large
+          echo ""
+          echo "=== Functions > 50 lines ==="
+          for file in $(find PhotoGalleryUploader.lrplugin/lua/ -name "*.lua"); do
+            awk '/^function / {fname=$0; lines=0} /{lines++} /^end$/ {if(lines > 50) print FILENAME":"NR":"fname":"lines" lines"}' "$file"
+          done || echo "✅ All functions are reasonably sized"
+
+  changelog-check:
+    name: Changelog Validation
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check CHANGELOG.md updated
+        run: |
+          if [ ! -f "CHANGELOG.md" ]; then
+            echo "⚠️  CHANGELOG.md not found (creating template)"
+            exit 0
+          fi
+
+          # Check if CHANGELOG was modified in this PR
+          if git diff --name-only origin/main...HEAD | grep -q "CHANGELOG.md"; then
+            echo "✅ CHANGELOG.md has been updated"
+          else
+            echo "⚠️  CHANGELOG.md was not updated in this PR"
+            echo "Please update CHANGELOG.md with your changes"
+            exit 0  # Warning only, not error
+          fi
+
+  build-package:
+    name: Build Plugin Package
+    runs-on: ubuntu-latest
+    needs: [lint, format, syntax, version-check, file-size-check]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(grep 'major = \|minor = \|revision = ' PhotoGalleryUploader.lrplugin/Info.lua | grep -oE '[0-9]+' | head -3 | paste -sd '.' -)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Create plugin package
+        run: |
+          cd PhotoGalleryUploader.lrplugin
+          cd ..
+          zip -r PhotoGalleryUploader-v${{ steps.version.outputs.version }}.zip PhotoGalleryUploader.lrplugin/ -x "*.git*" "*.idea*" ".qodo*"
+          ls -lh PhotoGalleryUploader-*.zip
+
+      - name: Upload package as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: plugin-package
+          path: PhotoGalleryUploader-*.zip
+          retention-days: 30

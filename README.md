@@ -222,6 +222,55 @@ GET /api/galleries/{id}/feedback
 - Lua 5.1 (built into Lightroom SDK)
 - Text editor (VS Code recommended)
 
+### Code Quality & CI/CD
+
+This project uses **automated code quality checks** with GitHub Actions:
+
+#### ✅ GitHub Actions Workflow
+Every push to `main` and every pull request runs:
+- **Luacheck** — Lua linter (detects undefined variables, unused code, etc.)
+- **StyLua** — Code formatter (ensures consistent formatting)
+- **Lua Syntax Check** — Validates Lua compilation
+
+All checks must **pass before merging** to `main`.
+
+#### 🏃 Run Checks Locally
+
+Before committing, run the quality check script:
+
+```bash
+# Run all checks (lint, format, syntax)
+./scripts/check.sh
+```
+
+Or run individual checks:
+
+```bash
+# Check Lua syntax
+luac -p PhotoGalleryUploader.lrplugin/*.lua PhotoGalleryUploader.lrplugin/lua/**/*.lua
+
+# Run linter (Luacheck)
+luacheck PhotoGalleryUploader.lrplugin/lua/ --globals LOC import export
+
+# Check code formatting
+stylua --check PhotoGalleryUploader.lrplugin/lua/
+
+# Auto-format code
+stylua PhotoGalleryUploader.lrplugin/lua/
+```
+
+#### 📦 Setup for Contributors
+
+```bash
+# Install Lua linter
+luarocks install luacheck
+
+# Install Lua formatter (requires Rust)
+cargo install stylua
+```
+
+See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for detailed setup instructions.
+
 ### Building/Packaging
 
 To distribute the plugin:
@@ -236,9 +285,11 @@ zip -r PhotoGalleryUploader-v0.1.0.zip PhotoGalleryUploader.lrplugin/
 ### Contributing
 
 Found a bug or have a feature request?
+- Read [Contributing Guidelines](.github/CONTRIBUTING.md) first
 - Open an issue on GitHub
 - Check existing issues first
 - Include Lightroom version and detailed steps to reproduce
+- Run `./scripts/check.sh` before submitting PR
 
 ## License
 

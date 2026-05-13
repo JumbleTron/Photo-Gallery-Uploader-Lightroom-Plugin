@@ -1,0 +1,31 @@
+# StyLua configuration for Photo Gallery Uploader plugin
+# Lua code formatting configuration
+
+indent_type = "spaces"
+indent_width = 2
+quote_style = "AutoPreferSingle"
+call_parentheses = "Always"
+collapse_simple_statement = "Never"
+
+# Line length before wrapping
+column_width = 120
+
+# Function argument parentheses
+function_args = "Auto"
+
+# Comments on their own line
+leading_trailing_trivia = true
+
+# Spaces around brackets
+spaces = true
+
+# String handling
+no_call_parentheses = false
+
+# Don't collapse if statements
+collapse_simple_blocks = false
+
+# Configuration per file/directory
+[overrides]
+
+# Loose formatting for certain files if needed

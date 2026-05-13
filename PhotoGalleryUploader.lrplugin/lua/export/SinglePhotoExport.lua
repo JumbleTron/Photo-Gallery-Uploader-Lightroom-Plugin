@@ -3,12 +3,22 @@ local LrDialogs = import "LrDialogs"
 local LrExportSession = import "LrExportSession"
 local LrApplication = import "LrApplication"
 local LrProgressScope = import "LrProgressScope"
-local LrPrefs = import "LrPrefs"
 local LrPathUtils = import "LrPathUtils"
-local ApiClient = require "ApiClient"
-local CollectionSettingsDialog = require "CollectionSettingsDialog"
+local Config = require "lua/core/Config"
+local CollectionSettingsDialog = require "lua/ui/CollectionSettingsDialog"
 
 local singlePhotoExport = {}
+
+local function findCollectionForGallery(catalog, galleryId)
+  local allPublishedCollections = catalog:getPublishedCollections()
+  for _, col in ipairs(allPublishedCollections) do
+    local settings = col:getCollectionSettings()
+    if settings.gallery_id == galleryId then
+      return col
+    end
+  end
+  return nil
+end
 
 function singlePhotoExport.exportMenuItemHandler(context)
   local catalog = LrApplication.activeCatalog()
@@ -26,16 +36,8 @@ function singlePhotoExport.exportMenuItemHandler(context)
 
   local photo = selectedPhotos[1]
 
-  local prefs = LrPrefs.prefsForPlugin()
-  local apiUrl = prefs.api_url or ""
-  local apiKey = prefs.api_key or ""
-
-  if apiUrl == "" or apiKey == "" then
-    LrDialogs.message(LOC "$$$/PhotoGalleryUploader/Error=Error", LOC "$$$/PhotoGalleryUploader/Error/CredentialsNotConfigured=Dane do API nie są skonfigurowane", "warning")
-    return
-  end
-
-  local client = ApiClient.new(apiUrl, apiKey)
+  local client = Config.createClient()
+  if not client then return end
   local success, galleries = client:getGalleries()
 
   if not success then
@@ -114,14 +116,11 @@ function singlePhotoExport.performUpload(context, photo, galleryId, addToCollect
   local photoMetadata = photo:getMetadata()
   local originalName = photoMetadata.fileName or "photo"
 
-  local prefs = LrPrefs.prefsForPlugin()
-  local apiUrl = prefs.api_url or ""
-  local apiKey = prefs.api_key or ""
-
-  local client = ApiClient.new(apiUrl, apiKey)
+  local client = Config.createClient()
+  if not client then return end
 
   local progressScope = LrProgressScope {
-    title = LOC "$$$/PhotoGalleryUploader/Progress/SyncingFeedback=Synchronizowanie feedback...",
+    title = LOC "$$$/PhotoGalleryUploader/Progress/UploadingPhoto=Wrzucanie zdjęcia...",
   }
 
   progressScope:setPortionComplete(0, 1)
@@ -154,16 +153,7 @@ function singlePhotoExport.performUpload(context, photo, galleryId, addToCollect
           local remoteId = result.remoteId or ("remote_" .. os.time())
 
           if addToCollection then
-            local allPublishedCollections = catalog:getPublishedCollections()
-            local matchingCollection = nil
-
-            for _, col in ipairs(allPublishedCollections) do
-              local settings = col:getCollectionSettings()
-              if settings.gallery_id == galleryId then
-                matchingCollection = col
-                break
-              end
-            end
+            local matchingCollection = findCollectionForGallery(catalog, galleryId)
 
             if matchingCollection then
               catalog:withWriteAccessDo(LOC "$$$/PhotoGalleryUploader/SinglePhoto/AddToCollection=Dodaj do Published Collection", function(ctx)
