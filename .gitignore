@@ -1,0 +1,53 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+*.swp
+*.swo
+*~
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build/Distribution
+build/
+dist/
+*.zip
+*.tar.gz
+
+# Logs
+*.log
+logs/
+
+# Lightroom
+*.lrdata
+*.lrcat
+*.aglib
+Previews.lrdata/
+Smart Previews.lrdata/
+
+# Node (if used for build tools)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Git
+.git/
+.gitkeep
+
+# IDE temp files
+*.tmp
+*.bak

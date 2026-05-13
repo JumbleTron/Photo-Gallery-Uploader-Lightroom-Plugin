@@ -1,0 +1,60 @@
+PhotoGalleryUploader/ExportProvider/Title = Photo Gallery Uploader
+PhotoGalleryUploader/CollectionSettings/Title = Gallery Settings
+PhotoGalleryUploader/AuthDialog/Title = Account Settings
+PhotoGalleryUploader/AuthDialog/Synopsis = API Configuration
+PhotoGalleryUploader/Menu/SyncAllFeedback = Photo Gallery Uploader: Sync feedback (all galleries)
+PhotoGalleryUploader/Menu/UploadPhoto = Photo Gallery Uploader: Upload photo to gallery
+
+PhotoGalleryUploader/CollectionSettings/Title = Gallery Configuration
+PhotoGalleryUploader/CollectionSettings/CreateNew = Create new gallery
+PhotoGalleryUploader/CollectionSettings/UseExisting = Use existing gallery
+PhotoGalleryUploader/CollectionSettings/Gallery = Gallery:
+PhotoGalleryUploader/CollectionSettings/RefreshGalleries = Refresh Galleries
+PhotoGalleryUploader/CollectionSettings/GalleryName = Gallery Name:
+PhotoGalleryUploader/CollectionSettings/Deadline = Deadline (opt):
+PhotoGalleryUploader/CollectionSettings/DeadlineTooltip = Acceptance deadline (YYYY-MM-DD)
+PhotoGalleryUploader/CollectionSettings/Message = Message (opt):
+PhotoGalleryUploader/CollectionSettings/MessageTooltip = Message for the client
+
+PhotoGalleryUploader/AuthDialog/ApiConfiguration = API Configuration
+PhotoGalleryUploader/AuthDialog/ApiUrl = API URL:
+PhotoGalleryUploader/AuthDialog/ApiUrlTooltip = Base URL of the API (e.g., https://example.com/api)
+PhotoGalleryUploader/AuthDialog/ApiKey = API Key:
+PhotoGalleryUploader/AuthDialog/ApiKeyTooltip = Your API key for authentication
+PhotoGalleryUploader/AuthDialog/TestConnection = Test Connection
+
+PhotoGalleryUploader/SinglePhoto/Title = Upload Photo to Gallery
+PhotoGalleryUploader/SinglePhoto/Gallery = Gallery:
+PhotoGalleryUploader/SinglePhoto/AddToCollection = Add to Published Collection
+PhotoGalleryUploader/SinglePhoto/Upload = Upload
+PhotoGalleryUploader/SinglePhoto/Cancel = Cancel
+PhotoGalleryUploader/SinglePhoto/Uploading = Uploading photo...
+
+PhotoGalleryUploader/Error/NoPhotoSelected = Please select a photo
+PhotoGalleryUploader/Error/MultiplePhotos = Select only one photo at a time
+PhotoGalleryUploader/Error/CredentialsNotConfigured = API credentials not configured
+PhotoGalleryUploader/Error/FailedLoadGalleries = Failed to load galleries: ^1
+PhotoGalleryUploader/Error/NoGalleries = No galleries available. Create one first.
+PhotoGalleryUploader/Error/NoGalleryId = Gallery ID not set
+PhotoGalleryUploader/Error/UploadFailed = Upload failed: ^1
+PhotoGalleryUploader/Error/FailedFetchFeedback = Failed to fetch feedback: ^1
+PhotoGalleryUploader/Error/ConfigureApiFirst = Please configure API URL and Key
+PhotoGalleryUploader/Error = Error
+
+PhotoGalleryUploader/Success/GalleryCreated = Gallery created with ID: ^1
+PhotoGalleryUploader/Success/PhotoUploaded = Photo uploaded! Remote ID: ^1
+PhotoGalleryUploader/Success/ConnectionSuccessful = Connection successful! Found ^1 galleries.
+PhotoGalleryUploader/Success/GalleryRenamed = Gallery renamed to: ^1
+PhotoGalleryUploader/Success/TriedLoaded = Loaded ^1 galleries
+PhotoGalleryUploader/Success/SyncedFeedback = Synced: ^1 picked, ^2 rejected, ^3 pending
+PhotoGalleryUploader/Success/SyncedAllGalleries = Total synced: ^1 picked, ^2 rejected, ^3 pending (skipped ^4)
+PhotoGalleryUploader/Success = Success
+
+PhotoGalleryUploader/Progress/SyncingFeedback = Syncing feedback...
+PhotoGalleryUploader/Progress/SyncingAllGalleries = Syncing feedback from all galleries...
+
+PhotoGalleryUploader/AuthDialog/FeedbackSettings = Feedback Settings
+PhotoGalleryUploader/AuthDialog/FeedbackSynopsis = Sync options
+PhotoGalleryUploader/AuthDialog/SyncOptions = Feedback Sync Options
+PhotoGalleryUploader/AuthDialog/KeywordsOnly = Keywords only, don't touch flags
+PhotoGalleryUploader/AuthDialog/KeywordsOnlyTooltip = If checked, sync adds only keywords (client-picked/rejected) without changing pick/reject flags. Useful if you already use flags for your own purposes.
